@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>守望先锋战绩查询</title>
+  <link rel="icon" href="app_icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 本地图标共用同一组符号，离线启动无需拉取字体或图标库。 -->
+  <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M5 10a7 7 0 0 1 14 0v5l2 3H3l2-3zm5 11h4"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M3 6h5m6 0h7M3 12h11m6 0h1M3 18h1m6 0h11"/><circle cx="11" cy="6" r="3"/><circle cx="17" cy="12" r="3"/><circle cx="7" cy="18" r="3"/></symbol>
+    <symbol id="i-account" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3 5h18M6 12h12M10 19h4"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9S4 17 4 12V6z"/></symbol>
+    <symbol id="i-crosshair" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v6m0 8v6M2 12h6m8 0h6"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1c-4 5 8 15 8 15S24 10 20 5Z"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></symbol>
+  </svg>
+  <!-- 扫码登录页：查询号没有凭据、或在账号卡片上点了扫码时显示 -->
+  <section id="view-login" class="login hidden">
+    <div class="login-card">
+      <img class="brand-mark big" src="app_icon.png" alt="龙娘头像" width="56" height="56">
+      <span class="eyebrow">守望先锋 · 本地战绩工作台</span>
+      <h1 id="login-title">扫码登录查询号</h1>
+      <p class="muted login-description">使用<strong>网易大神 App</strong> 扫码并确认<br>扫码账号需已绑定国服战网</p>
+      <div id="qr-wrap" class="qr-wrap" data-state="loading">
+        <img id="qr" alt="二维码" width="220" height="220">
+        <div class="qr-hint"><span class="qr-spin"></span><span id="qr-hint-text">正在获取二维码…</span></div>
+      </div>
+      <p id="login-msg" class="muted" role="status" aria-live="polite"></p>
+      <div class="row-gap">
+        <button id="btn-login-back" class="btn ghost hidden">返回</button>
+        <button id="btn-relogin" class="btn">重新获取二维码</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 主界面：左侧栏 + 内容区 -->
+  <div id="view-main" class="app hidden">
+    <aside class="sidebar" aria-label="主要导航">
+      <div class="brand">
+        <img class="brand-mark" src="app_icon.png" alt="龙娘头像" width="40" height="40">
+        <div><div class="brand-name">战绩查询</div><div class="muted small">国服 · 本地版</div></div>
+      </div>
+
+      <nav class="navigation" aria-label="工作台功能">
+        <button type="button" id="nav-query" class="nav-item active" aria-current="page"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>战绩查询</button>
+        <button type="button" id="btn-library" class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-users"/></svg>玩家库</button>
+        <button type="button" id="btn-reports" class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-bell"/></svg>举报提醒<span id="report-dot" class="nav-dot hidden" aria-label="有新举报"></span></button>
+        <button type="button" id="btn-accounts" class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-account"/></svg>账号管理</button>
+        <button type="button" id="btn-settings" class="nav-item"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>设置</button>
+      </nav>
+      <section class="favorites-section" aria-label="常用玩家">
+        <div class="side-title">常用玩家</div>
+        <div id="fav-chips" class="favorites"><span class="muted small">还没有收藏的玩家</span></div>
+      </section>
+      <div class="sidebar-status">
+        <button type="button" id="account-status" class="status-link"><span class="dot"></span><span id="account-summary">正在读取账号…</span></button>
+        <button type="button" id="report-summary" class="status-link muted">举报提醒未开启</button>
+      </div>
+    </aside>
+
+    <div class="content">
+      <header class="topbar">
+        <form id="search-form" class="search">
+          <svg class="icon search-icon" aria-hidden="true"><use href="#i-search"/></svg>
+          <input id="tag" aria-label="玩家 BattleTag" placeholder="搜索玩家，输入 名字#编号" autocomplete="off" required>
+          <button type="submit" id="btn-search" class="btn">查询</button>
+        </form>
+      </header>
+
+      <div id="notice" class="notice hidden" role="alert"></div>
+
+      <main id="empty" class="empty">
+        <div class="empty-art"><img src="app_icon.png" alt="" width="88" height="88"></div>
+        <h1>从一个玩家开始</h1>
+        <p class="muted">输入完整的 BattleTag，查看段位、赛季表现与近期对局。</p>
+        <div class="empty-hint">例如：玩家名字#12345<span>收藏后可从左侧直接查询</span></div>
+      </main>
+
+      <main id="result" class="result hidden">
+        <!-- 从上往下分区：头卡 → 段位 → 场均表现 → 近期对局，每区一个小标题 + 一张卡 -->
+        <div class="eyebrow page-caption">玩家档案 / 国服</div>
+        <section class="card profile" id="profile"></section>
+        <div class="query-toolbar">
+          <div class="seg" id="stat-mode" aria-label="统计模式">
+            <button type="button" data-stat="sport" class="active" aria-pressed="true">竞技</button>
+            <button type="button" data-stat="quick" aria-pressed="false">快速</button>
+          </div>
+          <label class="season-control"><span>赛季</span><select id="season" class="select" aria-label="统计与对局赛季"><option value="">当前赛季</option></select></label>
+        </div>
+
+        <div class="section-head"><h2 class="section-title" id="ranks-title">竞技段位</h2><span class="muted small">颜色对应段位</span></div>
+        <section class="card ranks" id="ranks"></section>
+
+        <div class="section-head"><h2 class="section-title" id="avg-title">赛季表现</h2><span class="muted small">赛季总览与近期表现</span></div>
+        <section class="card avg" id="avg"></section>
+
+        <div class="section-head">
+          <h2 class="section-title">近期对局</h2>
+          <div class="row-gap">
+            <button type="button" id="btn-find" class="btn ghost mini" title="按日期、英雄、同局玩家找某一场"><svg class="icon" aria-hidden="true"><use href="#i-filter"/></svg>找对局</button>
+          </div>
+        </div>
+        <div class="match-table">
+          <div class="match-toolbar"><span class="muted small">点击对局查看完整记分板</span>
+            <div class="seg" id="mode-filter">
+              <button type="button" data-mode="all" class="active" aria-pressed="true">全部</button>
+              <button type="button" data-mode="sport" aria-pressed="false">排位</button>
+              <button type="button" data-mode="quick" aria-pressed="false">快速</button>
+            </div>
+          </div>
+          <div class="match match-head">
+            <span></span><span>结果</span><span>比分</span><span>英雄</span><span>模式</span><span>地图</span>
+            <span class="num">击杀/助攻/阵亡</span><span class="num">时间</span>
+          </div>
+          <div class="matches" id="matches"></div>
+        </div>
+        <button type="button" id="btn-more" class="btn ghost more hidden">加载更多对局</button>
+      </main>
+    </div>
+  </div>
+
+  <!-- 找对局弹窗：放在记分板弹窗前面，点开结果时记分板盖在它上面 -->
+  <div id="find-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="find-title">
+    <div class="modal-body find-body">
+      <button id="find-close" class="close" aria-label="关闭">×</button>
+      <div class="dialog-heading"><span class="eyebrow">查找历史记录</span><h2 id="find-title">找对局 <span id="find-who" class="muted small"></span></h2></div>
+      <form id="find-form" class="find-form">
+        <label>日期范围（可空）<span class="find-time"><input type="date" id="find-date-from" class="input" title="开始日期"><span class="muted">~</span><input type="date" id="find-date-to" class="input" title="结束日期，空为今天"></span></label>
+        <label>每天时段（可空，可跨零点）<span class="find-time"><input type="time" id="find-from" class="input"><span class="muted">~</span><input type="time" id="find-to" class="input"></span></label>
+        <label>模式<select id="find-mode" class="select input">
+          <option value="all">全部</option><option value="sport">排位</option><option value="quick">快速</option></select></label>
+        <label>他用的英雄<input id="find-hero" class="input" list="hero-options" placeholder="可空" autocomplete="off"></label>
+        <label>地图<input id="find-map" class="input" list="map-options" placeholder="可空" autocomplete="off"></label>
+        <span></span>
+        <label class="wide">同局玩家名字<input id="find-names" class="input" placeholder="逗号分隔，包含即可，例如 奶龙, 小明（可空）" autocomplete="off"></label>
+        <label class="wide">同局英雄<input id="find-heroes" class="input" placeholder="逗号分隔，例如 源氏, 天使（可空）" autocomplete="off"></label>
+        <div class="wide row-between">
+          <span class="muted small">不填日期只查当前赛季，可跨赛季；先翻列表筛候选，填了同局条件才逐场看详情（每场 1 次请求，查过的不再请求，一次最多 100 场）</span>
+          <button type="submit" id="find-go" class="btn">开始查找</button>
+        </div>
+      </form>
+      <div id="find-status" class="find-status small"></div>
+      <div id="find-results" class="match-table find-results hidden"><div class="matches" id="find-list"></div></div>
+    </div>
+  </div>
+  <datalist id="hero-options"></datalist>
+  <datalist id="map-options"></datalist>
+
+  <!-- 对局详情弹窗 -->
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <div class="modal-body scroll-inner">
+      <button id="modal-close" class="close" aria-label="关闭">×</button>
+      <div class="dialog-heading"><span class="eyebrow">MATCH DETAILS</span><h2 id="detail-title">对局详情</h2></div>
+      <div id="detail"></div>
+    </div>
+  </div>
+
+  <!-- 玩家库弹窗：收藏 + 查过的全部玩家 -->
+  <div id="library-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="library-title">
+    <div class="modal-body narrow-lg">
+      <button id="library-close" class="close" aria-label="关闭">×</button>
+      <div class="dialog-heading"><span class="eyebrow">你的常用玩家与查询记录</span><h2 id="library-title">玩家库</h2></div>
+      <input id="library-filter" class="input" aria-label="搜索玩家库" placeholder="搜索名字或拼音首字母，例如 ysds" autocomplete="off">
+      <div class="seg lib-tabs" id="library-tabs">
+        <button type="button" data-tab="followed" class="active" aria-pressed="true">常用 <span id="lib-fav-count">0</span></button>
+        <button type="button" data-tab="all" aria-pressed="false">全部 <span id="lib-all-count">0</span></button>
+      </div>
+      <div id="library-list" class="lib-list"></div>
+    </div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-body settings-body">
+      <button id="settings-close" class="close" aria-label="关闭">×</button>
+      <div class="dialog-heading"><span class="eyebrow">偏好与应用管理</span><h2 id="settings-title">设置</h2></div>
+      <form id="settings-form" class="settings">
+        <fieldset class="settings-group">
+          <legend class="group-title">举报提醒</legend>
+          <div class="settings-fields">
+            <label><span>检查间隔<small>每隔多少秒检查一次</small></span><input type="number" id="set-heartbeat" required aria-label="检查间隔，秒"></label>
+            <label><span>提醒时间窗口<small>只提醒最近多少分钟的举报</small></span><input type="number" id="set-window" required aria-label="提醒时间窗口，分钟"></label>
+            <label><span>批次间隔<small>间隔内的举报合并为一批提醒</small></span><input type="number" id="set-batch" required aria-label="批次间隔，分钟"></label>
+          </div>
+          <p id="report-settings-hint" class="settings-hint muted small"></p>
+        </fieldset>
+        <fieldset class="settings-group">
+          <legend class="group-title">命令行（CLI）</legend>
+          <div class="settings-fields">
+            <label><span>每日请求上限<small>只统计 CLI 请求，桌面查询不计入</small></span><input type="number" id="set-cli-limit" step="1" required aria-label="CLI 每日请求上限，次" aria-describedby="cli-settings-hint"></label>
+          </div>
+          <p id="cli-settings-hint" class="settings-hint muted small"></p>
+        </fieldset>
+        <p id="settings-msg" class="muted small" role="status"></p>
+        <button type="submit" class="btn">保存</button>
+      </form>
+      <div class="update-box">
+        <h3 class="group-title">版本与更新</h3>
+        <div id="update-info" class="small"></div>
+        <div class="row-gap">
+          <button type="button" id="btn-update" class="btn ghost mini">安装更新包…</button>
+          <button type="button" id="btn-rollback" class="btn ghost mini hidden"></button>
+          <button type="button" id="btn-restart" class="btn mini hidden">立即重启</button>
+        </div>
+        <p id="update-msg" class="muted small"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="accounts-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="accounts-title">
+    <div class="modal-body account-body">
+      <button type="button" id="accounts-close" class="close" aria-label="关闭">×</button>
+      <div class="dialog-heading"><span class="eyebrow">凭据仅保存在本机</span><h2 id="accounts-title">账号管理</h2></div>
+      <p class="dialog-description">查询号用于查看战绩，主号用于读取本人提交的举报。两个槽位可独立切换。</p>
+      <div id="accounts" class="accounts"></div>
+    </div>
+  </div>
+
+  <div id="reports-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="reports-title">
+    <div class="modal-body report-body">
+      <button type="button" id="reports-close" class="close" aria-label="关闭">×</button>
+      <div class="dialog-heading"><span class="eyebrow">主号 · 本人举报工单</span><h2 id="reports-title">举报提醒</h2></div>
+      <div class="report-control"><div><strong>自动检查与提醒</strong><p class="muted small">新批次只提醒一次，并自动查询最新的一人</p></div><label class="switch"><input type="checkbox" id="report-toggle" aria-label="启用举报提醒"><span></span></label></div>
+      <div id="report-status" class="muted small" role="status">开启后按设置的间隔检查</div>
+      <div id="report-panel" class="report-list"><div class="panel-empty">开启提醒后，最近的举报记录会显示在这里。</div></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
