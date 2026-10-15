@@ -60,7 +60,7 @@ python -m ow_desktop find 玩家#12345 --date 2026-10-12 --with 同局玩家名
 
 ## 致谢
 
-协议与实现思路参考了以下开源项目，感谢各位作者（本项目没有复制它们的代码）：
+协议与实现思路参考了以下开源项目，感谢各位作者：
 
 - [qiyh99/BnetSwitch](https://github.com/qiyh99/BnetSwitch)（GPLv3）：扫码登录、签名与战绩接口的主要参考
 - [AddOneSecondL/Overstats](https://github.com/AddOneSecondL/Overstats)：战绩接口的字段与用法
